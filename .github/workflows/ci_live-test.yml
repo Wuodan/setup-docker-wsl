@@ -23,7 +23,11 @@ concurrency:
 
 jobs:
   live-action-test:
-    name: Run live action test
+    name: >-
+      ${{
+        (github.event_name != 'workflow_call' || inputs.retry-skrog-setup) &&
+        'Run live action test (retry enabled)' || 'Run live action test (retry disabled)'
+      }}
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -34,7 +38,7 @@ jobs:
       - name: Set up Docker in WSL
         uses: ./
         with:
-          retry-skrog-setup: ${{ inputs.retry-skrog-setup }}
+          retry-skrog-setup: ${{ github.event_name != 'workflow_call' || inputs.retry-skrog-setup }}
           verify-docker-in-containers: "true"
 
       - name: Verify Docker context and engine

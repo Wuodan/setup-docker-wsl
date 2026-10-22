@@ -10,6 +10,7 @@ name: "CI: live test stress"
         type: number
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -44,8 +45,66 @@ jobs:
     needs: prepare-matrix
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     uses: ./.github/workflows/ci_live-test.yml
     with:
       retry-skrog-setup: ${{ matrix.retry_skrog_setup }}
+
+  summarize-results:
+    name: Summarize stress-test results
+    needs:
+      - prepare-matrix
+      - live-action-test
+    if: ${{ always() && needs.prepare-matrix.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Count live-test results
+        env:
+          EXPECTED_SAMPLES: ${{ inputs.samples }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          jobs="$(
+            gh api --paginate --slurp \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100"
+          )"
+
+          summary="$(jq --exit-status --argjson expected_samples "${EXPECTED_SAMPLES}" '
+            [
+              .[]
+              | .jobs[]
+              | select(.name | test("^Run live action test \\(retry (enabled|disabled)\\)$"))
+            ] as $stress_jobs
+            | ($stress_jobs | map(select(.name == "Run live action test (retry enabled)"))) as $with_retry
+            | ($stress_jobs | map(select(.name == "Run live action test (retry disabled)"))) as $without_retry
+            | {
+                with_retry: {
+                  total: ($with_retry | length),
+                  failures: ($with_retry | map(select(.conclusion == "failure")) | length)
+                },
+                without_retry: {
+                  total: ($without_retry | length),
+                  failures: ($without_retry | map(select(.conclusion == "failure")) | length)
+                },
+                complete: ($stress_jobs | all(.conclusion == "success" or .conclusion == "failure"))
+              }
+            | select(
+                .with_retry.total == $expected_samples
+                and .without_retry.total == $expected_samples
+                and .complete
+              )
+          ' <<< "${jobs}")"
+
+          with_retry_failures="$(jq -r '.with_retry.failures' <<< "${summary}")"
+          with_retry_total="$(jq -r '.with_retry.total' <<< "${summary}")"
+          without_retry_failures="$(jq -r '.without_retry.failures' <<< "${summary}")"
+          without_retry_total="$(jq -r '.without_retry.total' <<< "${summary}")"
+
+          {
+            echo "## Live-test stress summary"
+            echo
+            echo "- With retry: ${with_retry_failures} of ${with_retry_total} failures"
+            echo "- Without retry: ${without_retry_failures} of ${without_retry_total} failures"
+          } >> "${GITHUB_STEP_SUMMARY}"
