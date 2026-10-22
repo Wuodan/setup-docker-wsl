@@ -23,11 +23,7 @@ concurrency:
 
 jobs:
   live-action-test:
-    name: >-
-      ${{
-        (github.event_name != 'workflow_call' || inputs.retry-skrog-setup) &&
-        'Run live action test (retry enabled)' || 'Run live action test (retry disabled)'
-      }}
+    name: Run live action test
     runs-on: windows-latest
     steps:
       - name: Checkout

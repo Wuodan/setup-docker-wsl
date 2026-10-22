@@ -20,7 +20,7 @@ jobs:
     outputs:
       matrix: ${{ steps.generate.outputs.matrix }}
     steps:
-      - name: Generate paired test matrix
+      - name: Generate test matrix
         id: generate
         env:
           SAMPLES: ${{ inputs.samples }}
@@ -33,30 +33,38 @@ jobs:
 
           matrix="$(jq --compact-output --null-input --argjson samples "${SAMPLES}" '
             [range(1; $samples + 1) as $sample |
-              {sample: $sample, retry_skrog_setup: true},
-              {sample: $sample, retry_skrog_setup: false}]
+              {sample: $sample}]
           ')"
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
 
-  live-action-test:
-    name: >-
-      Live action test (${{ matrix.retry_skrog_setup && 'retry enabled' || 'retry disabled' }},
-      sample ${{ matrix.sample }})
+  live-test-with-retry:
+    name: Live action test with retry (sample ${{ matrix.sample }})
     needs: prepare-matrix
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     uses: ./.github/workflows/ci_live-test.yml
     with:
-      retry-skrog-setup: ${{ matrix.retry_skrog_setup }}
+      retry-skrog-setup: true
+
+  live-test-without-retry:
+    name: Live action test without retry (sample ${{ matrix.sample }})
+    needs: prepare-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    uses: ./.github/workflows/ci_live-test.yml
+    with:
+      retry-skrog-setup: false
 
   summarize-results:
     name: Summarize stress-test results
     needs:
       - prepare-matrix
-      - live-action-test
+      - live-test-with-retry
+      - live-test-without-retry
     if: ${{ always() && needs.prepare-matrix.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -75,10 +83,19 @@ jobs:
             [
               .[]
               | .jobs[]
-              | select(.name | test("^Run live action test \\(retry (enabled|disabled)\\)$"))
+              | select(
+                  .name
+                  | test(
+                      "^live-test-(with|without)-retry / Run live action test$"
+                    )
+                )
             ] as $stress_jobs
-            | ($stress_jobs | map(select(.name == "Run live action test (retry enabled)"))) as $with_retry
-            | ($stress_jobs | map(select(.name == "Run live action test (retry disabled)"))) as $without_retry
+            | ($stress_jobs | map(select(
+                .name == "live-test-with-retry / Run live action test"
+              ))) as $with_retry
+            | ($stress_jobs | map(select(
+                .name == "live-test-without-retry / Run live action test"
+              ))) as $without_retry
             | {
                 with_retry: {
                   total: ($with_retry | length),
