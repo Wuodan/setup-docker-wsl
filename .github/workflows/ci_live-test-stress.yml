@@ -1,0 +1,51 @@
+name: "CI: live test stress"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Number of retry-enabled and retry-disabled samples to run (1-100).
+        required: false
+        default: 50
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-matrix:
+    name: Prepare stress-test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - name: Generate paired test matrix
+        id: generate
+        env:
+          SAMPLES: ${{ inputs.samples }}
+        run: |
+          set -euo pipefail
+          if ! [[ "${SAMPLES}" =~ ^[0-9]+$ ]] || (( SAMPLES < 1 || SAMPLES > 100 )); then
+            echo "samples must be an integer between 1 and 100." >&2
+            exit 1
+          fi
+
+          matrix="$(jq --compact-output --null-input --argjson samples "${SAMPLES}" '
+            [range(1; $samples + 1) as $sample |
+              {sample: $sample, retry_skrog_setup: true},
+              {sample: $sample, retry_skrog_setup: false}]
+          ')"
+          printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
+
+  live-action-test:
+    name: >-
+      Live action test (${{ matrix.retry_skrog_setup && 'retry enabled' || 'retry disabled' }},
+      sample ${{ matrix.sample }})
+    needs: prepare-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    uses: ./.github/workflows/ci_live-test.yml
+    with:
+      retry-skrog-setup: ${{ matrix.retry_skrog_setup }}

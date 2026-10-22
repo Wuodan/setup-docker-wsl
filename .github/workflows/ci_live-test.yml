@@ -2,6 +2,12 @@ name: "CI: live test"
 
 "on":
   workflow_call:
+    inputs:
+      retry-skrog-setup:
+        description: Retry Skrog setup once after a failed attempt.
+        required: false
+        default: true
+        type: boolean
   pull_request:
   push:
     branches:
@@ -28,6 +34,7 @@ jobs:
       - name: Set up Docker in WSL
         uses: ./
         with:
+          retry-skrog-setup: ${{ inputs.retry-skrog-setup }}
           verify-docker-in-containers: "true"
 
       - name: Verify Docker context and engine
