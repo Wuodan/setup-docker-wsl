@@ -1,10 +1,10 @@
-name: "CI: live test stress"
+name: "CI: setup-skrog stress test"
 
 "on":
   workflow_dispatch:
     inputs:
       samples:
-        description: Number of retry-enabled and retry-disabled samples to run (1-100).
+        description: Number of setup-skrog attempts to run (1-100).
         required: false
         default: 50
         type: number
@@ -41,45 +41,8 @@ jobs:
           ')"
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
 
-  live-test-with-retry:
-    name: Setup Skrog with retry (sample ${{ matrix.sample }})
-    needs: prepare-matrix
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
-    steps:
-      - name: Set up Skrog (attempt 1)
-        id: setup_skrog_first
-        continue-on-error: true
-        timeout-minutes: 5
-        uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
-        with:
-          version: "0.10.0"
-
-      - name: Set up Skrog (attempt 2)
-        id: setup_skrog_retry
-        if: steps.setup_skrog_first.outcome == 'failure'
-        continue-on-error: true
-        timeout-minutes: 5
-        uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
-        with:
-          version: "0.10.0"
-
-      - name: Check setup result
-        if: always()
-        shell: pwsh
-        env:
-          FIRST_OUTCOME: ${{ steps.setup_skrog_first.outcome }}
-          RETRY_OUTCOME: ${{ steps.setup_skrog_retry.outcome }}
-        run: |
-          if ($env:FIRST_OUTCOME -ne 'success' -and $env:RETRY_OUTCOME -ne 'success') {
-            throw "Skrog setup failed in both attempts."
-          }
-
-  live-test-without-retry:
-    name: Setup Skrog without retry (sample ${{ matrix.sample }})
+  setup-skrog:
+    name: Setup Skrog (sample ${{ matrix.sample }})
     needs: prepare-matrix
     runs-on: windows-latest
     strategy:
@@ -106,11 +69,10 @@ jobs:
           }
 
   summarize-results:
-    name: Summarize stress-test results
+    name: Summarize setup-skrog results
     needs:
       - prepare-matrix
-      - live-test-with-retry
-      - live-test-without-retry
+      - setup-skrog
     if: ${{ always() && needs.prepare-matrix.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -129,45 +91,24 @@ jobs:
             [
               .[]
               | .jobs[]
-              | select(
-                  .name
-                  | test(
-                      "^Setup Skrog (with|without) retry \\(sample [0-9]+\\)$"
-                    )
-                )
-            ] as $stress_jobs
-            | ($stress_jobs | map(select(
-                .name | startswith("Setup Skrog with retry (sample ")
-              ))) as $with_retry
-            | ($stress_jobs | map(select(
-                .name | startswith("Setup Skrog without retry (sample ")
-              ))) as $without_retry
+              | select(.name | test("^Setup Skrog \\(sample [0-9]+\\)$"))
+            ] as $setup_jobs
             | {
-                with_retry: {
-                  total: ($with_retry | length),
-                  failures: ($with_retry | map(select(.conclusion == "failure")) | length)
-                },
-                without_retry: {
-                  total: ($without_retry | length),
-                  failures: ($without_retry | map(select(.conclusion == "failure")) | length)
-                },
-                complete: ($stress_jobs | all(.conclusion == "success" or .conclusion == "failure"))
+                total: ($setup_jobs | length),
+                failures: ($setup_jobs | map(select(.conclusion == "failure")) | length),
+                complete: ($setup_jobs | all(.conclusion == "success" or .conclusion == "failure"))
               }
             | select(
-                .with_retry.total == $expected_samples
-                and .without_retry.total == $expected_samples
+                .total == $expected_samples
                 and .complete
               )
           ' <<< "${jobs}")"
 
-          with_retry_failures="$(jq -r '.with_retry.failures' <<< "${summary}")"
-          with_retry_total="$(jq -r '.with_retry.total' <<< "${summary}")"
-          without_retry_failures="$(jq -r '.without_retry.failures' <<< "${summary}")"
-          without_retry_total="$(jq -r '.without_retry.total' <<< "${summary}")"
+          failures="$(jq -r '.failures' <<< "${summary}")"
+          total="$(jq -r '.total' <<< "${summary}")"
 
           {
-            echo "## Live-test stress summary"
+            echo "## Setup-skrog stress summary"
             echo
-            echo "- With retry: ${with_retry_failures} of ${with_retry_total} failures"
-            echo "- Without retry: ${without_retry_failures} of ${without_retry_total} failures"
+            echo "- Setup Skrog: ${failures} of ${total} failures"
           } >> "${GITHUB_STEP_SUMMARY}"
