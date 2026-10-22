@@ -10,7 +10,6 @@ name: "CI: setup-skrog stress test"
         type: number
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -67,48 +66,3 @@ jobs:
           if ($env:SETUP_OUTCOME -ne 'success') {
             throw "Skrog setup failed."
           }
-
-  summarize-results:
-    name: Summarize setup-skrog results
-    needs:
-      - prepare-matrix
-      - setup-skrog
-    if: ${{ always() && needs.prepare-matrix.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Count live-test results
-        env:
-          EXPECTED_SAMPLES: ${{ inputs.samples }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          jobs="$(
-            gh api --paginate --slurp \
-              "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100"
-          )"
-
-          summary="$(jq --exit-status --argjson expected_samples "${EXPECTED_SAMPLES}" '
-            [
-              .[]
-              | .jobs[]
-              | select(.name | test("^Setup Skrog \\(sample [0-9]+\\)$"))
-            ] as $setup_jobs
-            | {
-                total: ($setup_jobs | length),
-                failures: ($setup_jobs | map(select(.conclusion == "failure")) | length),
-                complete: ($setup_jobs | all(.conclusion == "success" or .conclusion == "failure"))
-              }
-            | select(
-                .total == $expected_samples
-                and .complete
-              )
-          ' <<< "${jobs}")"
-
-          failures="$(jq -r '.failures' <<< "${summary}")"
-          total="$(jq -r '.total' <<< "${summary}")"
-
-          {
-            echo "## Setup-skrog stress summary"
-            echo
-            echo "- Setup Skrog: ${failures} of ${total} failures"
-          } >> "${GITHUB_STEP_SUMMARY}"
