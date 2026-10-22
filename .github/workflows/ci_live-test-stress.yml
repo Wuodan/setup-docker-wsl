@@ -44,6 +44,7 @@ jobs:
     name: Setup Skrog (sample ${{ matrix.sample }})
     needs: prepare-matrix
     runs-on: windows-latest
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
@@ -52,7 +53,6 @@ jobs:
       - name: Set up Skrog
         id: setup_skrog
         continue-on-error: true
-        timeout-minutes: 5
         uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
         with:
           version: "0.10.0"
