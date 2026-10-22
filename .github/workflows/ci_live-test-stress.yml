@@ -13,6 +13,10 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   prepare-matrix:
     name: Prepare stress-test matrix
@@ -38,26 +42,68 @@ jobs:
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
 
   live-test-with-retry:
-    name: Live action test with retry (sample ${{ matrix.sample }})
+    name: Setup Skrog with retry (sample ${{ matrix.sample }})
     needs: prepare-matrix
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
-    uses: ./.github/workflows/ci_live-test.yml
-    with:
-      retry-skrog-setup: true
+    steps:
+      - name: Set up Skrog (attempt 1)
+        id: setup_skrog_first
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
+        with:
+          version: "0.10.0"
+
+      - name: Set up Skrog (attempt 2)
+        id: setup_skrog_retry
+        if: steps.setup_skrog_first.outcome == 'failure'
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
+        with:
+          version: "0.10.0"
+
+      - name: Check setup result
+        if: always()
+        shell: pwsh
+        env:
+          FIRST_OUTCOME: ${{ steps.setup_skrog_first.outcome }}
+          RETRY_OUTCOME: ${{ steps.setup_skrog_retry.outcome }}
+        run: |
+          if ($env:FIRST_OUTCOME -ne 'success' -and $env:RETRY_OUTCOME -ne 'success') {
+            throw "Skrog setup failed in both attempts."
+          }
 
   live-test-without-retry:
-    name: Live action test without retry (sample ${{ matrix.sample }})
+    name: Setup Skrog without retry (sample ${{ matrix.sample }})
     needs: prepare-matrix
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
-    uses: ./.github/workflows/ci_live-test.yml
-    with:
-      retry-skrog-setup: false
+    steps:
+      - name: Set up Skrog
+        id: setup_skrog
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
+        with:
+          version: "0.10.0"
+
+      - name: Check setup result
+        if: always()
+        shell: pwsh
+        env:
+          SETUP_OUTCOME: ${{ steps.setup_skrog.outcome }}
+        run: |
+          if ($env:SETUP_OUTCOME -ne 'success') {
+            throw "Skrog setup failed."
+          }
 
   summarize-results:
     name: Summarize stress-test results
@@ -86,15 +132,15 @@ jobs:
               | select(
                   .name
                   | test(
-                      "^live-test-(with|without)-retry / Run live action test$"
+                      "^Setup Skrog (with|without) retry \\(sample [0-9]+\\)$"
                     )
                 )
             ] as $stress_jobs
             | ($stress_jobs | map(select(
-                .name == "live-test-with-retry / Run live action test"
+                .name | startswith("Setup Skrog with retry (sample ")
               ))) as $with_retry
             | ($stress_jobs | map(select(
-                .name == "live-test-without-retry / Run live action test"
+                .name | startswith("Setup Skrog without retry (sample ")
               ))) as $without_retry
             | {
                 with_retry: {
