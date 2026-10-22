@@ -27,9 +27,10 @@ Run the action before Docker commands:
 ## Inputs
 
 <!-- markdownlint-disable MD013 -->
-| Name                          | Required | Default  | Description                            |
-|-------------------------------|----------|----------|----------------------------------------|
-| `skrog-version`               | No       | `0.10.0` | Skrog release version to install.      |
-| `verify-docker`               | No       | `true`   | Verify Docker.                         |
-| `verify-docker-in-containers` | No       | `false`  | Verify Docker access from a container. |
+| Name                          | Required | Default  | Description                                      |
+|-------------------------------|----------|----------|--------------------------------------------------|
+| `skrog-version`               | No       | `0.10.0` | Skrog release version to install.                |
+| `retry-skrog-setup`           | No       | `true`   | Retry Skrog setup once after a failed attempt.   |
+| `verify-docker`               | No       | `true`   | Verify Docker.                                   |
+| `verify-docker-in-containers` | No       | `false`  | Verify Docker access from a container.           |
 <!-- markdownlint-enable MD013 -->
