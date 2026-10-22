@@ -4,7 +4,7 @@ name: "CI: setup-skrog stress test"
   workflow_dispatch:
     inputs:
       samples:
-        description: Number of setup-skrog attempts to run (1-100).
+        description: Number of setup-skrog attempts to run
         required: false
         default: 50
         type: number
@@ -29,11 +29,6 @@ jobs:
           SAMPLES: ${{ inputs.samples }}
         run: |
           set -euo pipefail
-          if ! [[ "${SAMPLES}" =~ ^[0-9]+$ ]] || (( SAMPLES < 1 || SAMPLES > 100 )); then
-            echo "samples must be an integer between 1 and 100." >&2
-            exit 1
-          fi
-
           matrix="$(jq --compact-output --null-input --argjson samples "${SAMPLES}" '
             [range(1; $samples + 1) as $sample |
               {sample: $sample}]
