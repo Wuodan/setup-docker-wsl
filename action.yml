@@ -12,10 +12,6 @@ inputs:
     required: false
     # renovate: datasource=github-releases depName=wslkit/skrog versioning=semver
     default: "0.10.0"
-  retry-skrog-setup:
-    description: Retry Skrog setup once after a failed attempt.
-    required: false
-    default: "true"
   verify-docker:
     description: Verify the WSL Docker engine.
     required: false
@@ -28,33 +24,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Set up Skrog (attempt 1)
-      id: setup-skrog
-      continue-on-error: true
-      timeout-minutes: 5
+    - name: Set up Skrog
       uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
       with:
         version: ${{ inputs.skrog-version }}
-
-    - name: Set up Skrog (attempt 2)
-      id: setup-skrog-retry
-      if: inputs.retry-skrog-setup == 'true' && steps.setup-skrog.outcome == 'failure'
-      continue-on-error: true
-      timeout-minutes: 5
-      uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
-      with:
-        version: ${{ inputs.skrog-version }}
-
-    - name: Check Skrog setup result
-      if: always()
-      shell: powershell
-      env:
-        SETUP_SKROG_OUTCOME: ${{ steps.setup-skrog.outcome }}
-        SETUP_SKROG_RETRY_OUTCOME: ${{ steps.setup-skrog-retry.outcome }}
-      run: |
-        if ($env:SETUP_SKROG_OUTCOME -ne 'success' -and $env:SETUP_SKROG_RETRY_OUTCOME -ne 'success') {
-          throw "Skrog setup failed in both attempts."
-        }
 
     - name: Install and configure Skrog Docker CLI
       shell: powershell
