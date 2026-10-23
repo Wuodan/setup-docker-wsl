@@ -7,9 +7,10 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^action\\.ya?ml$/"],
+      "managerFilePatterns": ["/^action\\.ya?ml$/", "/^README\\.md$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver)\\s+default:\\s+\\\"(?<currentValue>[^\\\"]+)\\\""
+        "# renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver)\\s+default:\\s*[\\\"'`]?(?<currentValue>[^\\s\\\"'`]+)",
+        "<!-- renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver) -->\\s*[\\\"'`]?(?<currentValue>[^\\s\\\"'`]+)"
       ]
     }
   ],
