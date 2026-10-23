@@ -12,18 +12,27 @@ inputs:
     required: false
     # renovate: datasource=github-releases depName=wslkit/skrog versioning=semver
     default: "0.10.0"
+  enable-unix-socket:
+    description: Enable Unix socket `/var/run/docker.sock`.
+    required: false
+    default: "true"
   verify-docker:
     description: Verify the WSL Docker engine.
     required: false
     default: "true"
   verify-docker-in-containers:
-    description: Verify Docker access from containers through Skrog's named-pipe socket.
+    description: Verify Docker access from containers.
     required: false
     default: "false"
 
 runs:
   using: composite
   steps:
+    - name: Stop Docker Engine
+      if: inputs.enable-unix-socket == 'true'
+      shell: powershell
+      run: '& "$env:GITHUB_ACTION_PATH/scripts/stop-docker-engine.ps1"'
+
     - name: Set up Skrog
       uses: wslkit/setup-skrog@cd2cba80924975b0c77217947c228da8aac17b1f # v2.0.0
       with:
