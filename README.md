@@ -7,7 +7,7 @@
 
 Set up a Linux Docker engine in WSL on a Windows GitHub Actions runner with [Skrog](https://github.com/wslkit/skrog).
 
-Run `docker` in later workflow steps. The Docker engine runs in WSL
+Run `docker` in later workflow steps. The Docker engine runs in WSL.
 
 ## Usage
 
@@ -27,9 +27,28 @@ Run the action before Docker commands:
 ## Inputs
 
 <!-- markdownlint-disable MD013 -->
-| Name                          | Required | Default  | Description                            |
-|-------------------------------|----------|----------|----------------------------------------|
-| `skrog-version`               | No       | `0.10.0` | Skrog release version to install.      |
-| `verify-docker`               | No       | `true`   | Verify Docker.                         |
-| `verify-docker-in-containers` | No       | `false`  | Verify Docker access from a container. |
+| Name                          | Required | Default  | Description                                |
+|-------------------------------|----------|----------|--------------------------------------------|
+| `skrog-version`               | No       | `0.10.0` | Skrog release version to install.          |
+| `enable-unix-socket`          | No       | `true`   | Enable Unix socket `/var/run/docker.sock`. |
+| `verify-docker`               | No       | `true`   | Verify Docker.                             |
+| `verify-docker-in-containers` | No       | `false`  | Verify Docker access from a container.     |
 <!-- markdownlint-enable MD013 -->
+
+On persistent self-hosted runners, set `enable-unix-socket: "false"` to preserve a running Docker Engine.
+
+## Unix socket and Docker access from containers
+
+For containers to use the host's Docker daemon, one would typically use the Unix socket `/var/run/docker.sock`.
+
+Example:
+
+```shell
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock docker:cli version
+```
+
+The default `enable-unix-socket` stops Docker Engine before Skrog starts so the
+Unix socket mount above works.
+
+For pipe and context details, see the [Skrog installation docs](https://wslkit.github.io/skrog/install/?utm_source=chatgpt.com#which-pipe-and-when-you-need-a-context)
+and [CI runner docs](https://wslkit.github.io/skrog/ci-runners/?utm_source=chatgpt.com#point-a-runner-at-the-engine).
