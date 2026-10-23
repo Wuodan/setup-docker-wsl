@@ -9,8 +9,7 @@
       "customType": "regex",
       "managerFilePatterns": ["/^action\\.ya?ml$/", "/^README\\.md$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver)\\s+default:\\s*[\\\"'`]?(?<currentValue>[^\\s\\\"'`]+)",
-        "<!-- renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver) -->\\s*[\\\"'`]?(?<currentValue>[^\\s\\\"'`]+)"
+        "[\\\"'`]?(?<currentValue>[^\\s\\\"'`]+)[\\\"'`]?\\s*(?:#|<!--) renovate: datasource=(?<datasource>github-releases) depName=(?<depName>wslkit/skrog) versioning=(?<versioning>semver)(?: -->)?"
       ]
     }
   ],
