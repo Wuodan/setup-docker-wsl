@@ -8,10 +8,9 @@ branding:
 
 inputs:
   skrog-version:
-    description: Skrog release version to install.
+    description: Skrog release version to install or "latest".
     required: false
-    # renovate: datasource=github-releases depName=wslkit/skrog versioning=semver
-    default: "0.10.0"
+    default: "0.10.0" # renovate: datasource=github-releases depName=wslkit/skrog versioning=semver
   enable-unix-socket:
     description: Enable Unix socket `/var/run/docker.sock`.
     required: false
