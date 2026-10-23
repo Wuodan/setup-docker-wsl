@@ -35,14 +35,14 @@ Run the action before Docker commands:
 | `verify-docker-in-containers` | No       | `false`                                                                                     | Verify Docker access from a container.        |
 <!-- markdownlint-enable MD013 -->
 
-On persistent self-hosted runners, set `enable-unix-socket: "false"` to preserve a running Docker Engine.
+On persistent self-hosted runners, set `enable-unix-socket: "false"` to preserve a running Docker Engine. adfasdfasfda adsfasdfa asdfadf adsfa
 
 ## Unix socket and Docker access from containers
 
 For containers to use the host's Docker daemon, one would typically use the Unix socket `/var/run/docker.sock`.
 
-Example:
 
+Example:
 ```shell
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock docker:cli version
 ```
