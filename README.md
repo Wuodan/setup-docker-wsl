@@ -29,7 +29,7 @@ Run the action before Docker commands:
 <!-- markdownlint-disable MD013 -->
 | Name                          | Required | Default                                                                                      | Description                                |
 |-------------------------------|----------|----------------------------------------------------------------------------------------------|--------------------------------------------|
-| `skrog-version`               | No       | <!-- renovate: datasource=github-releases depName=wslkit/skrog versioning=semver -->`0.9.0` | Skrog release version to install.          |
+| `skrog-version`               | No       | <!-- renovate: datasource=github-releases depName=wslkit/skrog versioning=semver -->`0.10.0` | Skrog release version to install.          |
 | `enable-unix-socket`          | No       | `true`                                                                                       | Enable Unix socket `/var/run/docker.sock`. |
 | `verify-docker`               | No       | `true`                                                                                       | Verify Docker.                             |
 | `verify-docker-in-containers` | No       | `false`                                                                                      | Verify Docker access from a container.     |
