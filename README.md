@@ -27,12 +27,12 @@ Run the action before Docker commands:
 ## Inputs
 
 <!-- markdownlint-disable MD013 -->
-| Name                          | Required | Default  | Description                                |
-|-------------------------------|----------|----------|--------------------------------------------|
-| `skrog-version`               | No       | `0.10.0` | Skrog release version to install.          |
-| `enable-unix-socket`          | No       | `true`   | Enable Unix socket `/var/run/docker.sock`. |
-| `verify-docker`               | No       | `true`   | Verify Docker.                             |
-| `verify-docker-in-containers` | No       | `false`  | Verify Docker access from a container.     |
+| Name                          | Required | Default                                                                                      | Description                                   |
+|-------------------------------|----------|----------------------------------------------------------------------------------------------|-----------------------------------------------|
+| `skrog-version`               | No       | `0.10.0`<!-- renovate: datasource=github-releases depName=wslkit/skrog versioning=semver --> | Skrog release version to install or "latest". |
+| `enable-unix-socket`          | No       | `true`                                                                                       | Enable Unix socket `/var/run/docker.sock`.    |
+| `verify-docker`               | No       | `true`                                                                                       | Verify Docker.                                |
+| `verify-docker-in-containers` | No       | `false`                                                                                      | Verify Docker access from a container.        |
 <!-- markdownlint-enable MD013 -->
 
 On persistent self-hosted runners, set `enable-unix-socket: "false"` to preserve a running Docker Engine.
